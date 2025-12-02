@@ -171,8 +171,10 @@ Page {
                     }
                     contentItem: Text {
                         text: "📅"
-                        font.pixelSize: 24
-                        anchors.centerIn: parent
+                            font.pixelSize: 24
+                            horizontalAlignment: Text.AlignHCenter
+                            verticalAlignment: Text.AlignVCenter
+                            elide: Text.ElideRight
                     }
                     onClicked: {
                         pickerDate = new Date(selectedDate)
