@@ -3,21 +3,40 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 Page {
-    title: "Новая привычка"
+    id: addPage
     background: Rectangle { color: appWindow.bgColor }
 
     header: Item {
         height: 60
-        Text {
-            text: "< Назад"
-            color: appWindow.accentColor
+
+        // Кнопка Назад
+        Item {
+            width: 80
+            height: parent.height
             anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: 20
             MouseArea { anchors.fill: parent; onClicked: stackView.pop() }
+
+            RowLayout {
+                anchors.centerIn: parent
+                spacing: 5
+                Text {
+                    text: "‹"
+                    color: appWindow.accentColor
+                    font.pixelSize: 36
+                    font.bold: true
+                    Layout.alignment: Qt.AlignVCenter
+                }
+                Text {
+                    text: "Назад"
+                    color: appWindow.accentColor
+                    font.pixelSize: 16
+                    font.bold: true
+                }
+            }
         }
+
         Text {
-            text: "Создать"
+            text: "Новая привычка"
             color: "white"
             font.bold: true
             font.pixelSize: 18
@@ -25,69 +44,120 @@ Page {
         }
     }
 
-    ColumnLayout {
-        anchors.centerIn: parent
-        width: parent.width * 0.85
-        spacing: 25
+    // ScrollView нужен для клавиатуры, но мы скрываем полосу
+    ScrollView {
+        id: scrollView
+        anchors.fill: parent
+        clip: true
+        contentWidth: availableWidth // Запрет горизонтального скролла
 
-        Text {
-            text: "Что будем трекать?"
-            color: "white"
-            font.pixelSize: 24
-            font.bold: true
-        }
+        // !!! ГЛАВНОЕ ИЗМЕНЕНИЕ: Скрываем визуальную полосу прокрутки !!!
+        ScrollBar.vertical.policy: ScrollBar.AlwaysOff
 
-        // Поле ввода Названия
-        TextField {
-            id: nameField
-            placeholderText: "Название (например, Бег)"
-            Layout.fillWidth: true
-            color: "white"
-            background: Rectangle {
-                color: appWindow.surfaceColor
-                radius: 10
-                border.width: 0
-            }
-            font.pixelSize: 16
-            padding: 15
-        }
+        ColumnLayout {
+            width: parent.width
+            spacing: 25
+            anchors.margins: 20
+            anchors.horizontalCenter: parent.horizontalCenter
 
-        // Поле ввода Описания
-        TextField {
-            id: descField
-            placeholderText: "Мотивация или детали..."
-            Layout.fillWidth: true
-            color: "white"
-            background: Rectangle {
-                color: appWindow.surfaceColor
-                radius: 10
-            }
-            font.pixelSize: 16
-            padding: 15
-        }
+            Item { height: 20 }
 
-        Item { height: 20 } // Отступ
-
-        Button {
-            Layout.fillWidth: true
-            height: 50
-            background: Rectangle {
-                color: appWindow.accentColor
-                radius: 12
-            }
-            contentItem: Text {
-                text: "Сохранить привычку"
+            Text {
+                text: "Что будем трекать?"
                 color: "white"
+                font.pixelSize: 26
                 font.bold: true
-                font.pixelSize: 16
+                Layout.fillWidth: true
                 horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
             }
-            onClicked: {
-                if (nameField.text !== "") {
+
+            // Поле Названия
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Label {
+                    text: "НАЗВАНИЕ"
+                    color: appWindow.subTextColor
+                    font.pixelSize: 12
+                    font.bold: true
+                    Layout.leftMargin: 5
+                }
+                TextField {
+                    id: nameField
+                    placeholderText: "Например: Бег"
+                    placeholderTextColor: "#606070"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 55
+                    color: "white"
+                    font.pixelSize: 16
+                    leftPadding: 15
+                    background: Rectangle {
+                        color: appWindow.surfaceColor
+                        radius: 12
+                        border.color: nameField.activeFocus ? appWindow.accentColor : "transparent"
+                        border.width: 2
+                    }
+                }
+            }
+
+            // Поле Описания
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 8
+                Label {
+                    text: "ОПИСАНИЕ"
+                    color: appWindow.subTextColor
+                    font.pixelSize: 12
+                    font.bold: true
+                    Layout.leftMargin: 5
+                }
+                TextField {
+                    id: descField
+                    placeholderText: "Детали..."
+                    placeholderTextColor: "#606070"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 55
+                    color: "white"
+                    font.pixelSize: 16
+                    leftPadding: 15
+                    background: Rectangle {
+                        color: appWindow.surfaceColor
+                        radius: 12
+                        border.color: descField.activeFocus ? appWindow.accentColor : "transparent"
+                        border.width: 2
+                    }
+                }
+            }
+
+            Item { height: 20 }
+
+            // Кнопка Сохранить
+            Button {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 55
+                Layout.margins: 10
+
+                background: Rectangle {
+                    color: nameField.text.length > 0 ? appWindow.accentColor : "#3A3A4C"
+                    radius: 16
+                }
+
+                contentItem: Text {
+                    text: "Сохранить привычку"
+                    color: nameField.text.length > 0 ? "white" : "#808090"
+                    font.bold: true
+                    font.pixelSize: 16
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                enabled: nameField.text.length > 0
+                onClicked: {
                     dbHandler.addHabit(nameField.text, descField.text)
                     stackView.pop()
-                    stackView.currentItem.refreshList()
+                    if (stackView.currentItem && stackView.currentItem.refreshList) {
+                        stackView.currentItem.refreshList()
+                    }
                 }
             }
         }
