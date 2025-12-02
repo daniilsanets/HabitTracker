@@ -7,151 +7,184 @@ Page {
     background: Rectangle { color: appWindow.bgColor }
 
     // --- Свойства для РЕДАКТИРОВАНИЯ ---
-    // Если habitId == -1, значит мы создаем новую. Если > -1, значит редактируем.
     property int habitId: -1
     property string initialName: ""
     property string initialDesc: ""
     property int initialFreq: 0 // 0 - Ежедневно, 1 - Еженедельно
 
-    // При открытии страницы заполняем поля, если это редактирование
+    // Локальное свойство для хранения выбранной частоты (вместо ComboBox)
+    property int selectedFreqIndex: initialFreq
+
     Component.onCompleted: {
         if (habitId !== -1) {
             nameField.text = initialName
             descField.text = initialDesc
-            freqCombo.currentIndex = initialFreq
+            selectedFreqIndex = initialFreq
         }
     }
 
+    // --- НОВЫЙ ХЕДЕР ---
     header: Item {
-        height: 60
-        Item {
-            width: 80; height: parent.height; anchors.left: parent.left
+        height: 80
+
+        // Кнопка Закрыть (вместо Назад)
+        Rectangle {
+            width: 40; height: 40; radius: 14
+            color: appWindow.surfaceColor
+            anchors.left: parent.left; anchors.leftMargin: 20
+            anchors.verticalCenter: parent.verticalCenter
+
+            Text { text: "✕"; color: "white"; font.pixelSize: 18; anchors.centerIn: parent }
             MouseArea { anchors.fill: parent; onClicked: stackView.pop() }
-            RowLayout {
-                anchors.centerIn: parent; spacing: 5
-                Text { text: "‹"; color: appWindow.accentColor; font.pixelSize: 36; font.bold: true }
-                Text { text: "Назад"; color: appWindow.accentColor; font.pixelSize: 16; font.bold: true }
-            }
         }
+
+        // Заголовок
         Text {
-            // Меняем заголовок в зависимости от режима
             text: habitId === -1 ? "Новая привычка" : "Редактирование"
-            color: "white"; font.bold: true; font.pixelSize: 18; anchors.centerIn: parent
+            color: "white"
+            font.bold: true; font.pixelSize: 20
+            anchors.centerIn: parent
         }
     }
 
     ScrollView {
         id: scrollView
         anchors.fill: parent
+        anchors.topMargin: 10
         clip: true
         contentWidth: availableWidth
         ScrollBar.vertical.policy: ScrollBar.AlwaysOff
 
         ColumnLayout {
-            width: parent.width
-            spacing: 20
-            anchors.margins: 20
+            width: parent.width - 40 // Отступы по 20px с краев
             anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 25
 
-            Item { height: 10 }
-
-            // Название
+            // --- 1. НАЗВАНИЕ ---
             ColumnLayout {
-                Layout.fillWidth: true; spacing: 8
-                Label { text: "НАЗВАНИЕ"; color: appWindow.subTextColor; font.pixelSize: 12; font.bold: true; Layout.leftMargin: 5 }
+                spacing: 10; Layout.fillWidth: true
+                Text { text: "Название"; color: appWindow.subTextColor; font.bold: true; font.pixelSize: 14 }
+
                 TextField {
                     id: nameField
-                    placeholderText: "Например: Спортзал"
+                    Layout.fillWidth: true; Layout.preferredHeight: 60
+                    placeholderText: "Например: Бег по утрам"
                     placeholderTextColor: "#606070"
-                    Layout.fillWidth: true; Layout.preferredHeight: 55
-                    color: "white"; font.pixelSize: 16; leftPadding: 15
-                    background: Rectangle {
-                        color: appWindow.surfaceColor; radius: 12
-                        border.color: nameField.activeFocus ? appWindow.accentColor : "transparent"; border.width: 2
-                    }
-                }
-            }
+                    color: "white"; font.pixelSize: 18
+                    leftPadding: 20; rightPadding: 20
 
-            // Описание
-            ColumnLayout {
-                Layout.fillWidth: true; spacing: 8
-                Label { text: "ОПИСАНИЕ"; color: appWindow.subTextColor; font.pixelSize: 12; font.bold: true; Layout.leftMargin: 5 }
-                TextField {
-                    id: descField
-                    placeholderText: "Детали..."
-                    placeholderTextColor: "#606070"
-                    Layout.fillWidth: true; Layout.preferredHeight: 55
-                    color: "white"; font.pixelSize: 16; leftPadding: 15
-                    background: Rectangle {
-                        color: appWindow.surfaceColor; radius: 12
-                        border.color: descField.activeFocus ? appWindow.accentColor : "transparent"; border.width: 2
-                    }
-                }
-            }
-
-            // Выбор частоты (Ежедневно / Еженедельно)
-            ColumnLayout {
-                Layout.fillWidth: true; spacing: 8
-                Label { text: "ПОВТОРЕНИЕ"; color: appWindow.subTextColor; font.pixelSize: 12; font.bold: true; Layout.leftMargin: 5 }
-
-                ComboBox {
-                    id: freqCombo
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 55
-                    model: ["Ежедневно", "Еженедельно"]
-                    currentIndex: 0
-
-                    // Кастомизация ComboBox под темную тему
-                    delegate: ItemDelegate {
-                        width: freqCombo.width
-                        contentItem: Text {
-                            text: modelData
-                            color: "white"
-                            font.pixelSize: 16
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                        background: Rectangle { color: appWindow.surfaceColor }
-                        highlighted: freqCombo.highlightedIndex === index
-                    }
-                    contentItem: Text {
-                        leftPadding: 15
-                        text: freqCombo.displayText
-                        font.pixelSize: 16
-                        color: "white"
-                        verticalAlignment: Text.AlignVCenter
-                    }
                     background: Rectangle {
                         color: appWindow.surfaceColor
-                        radius: 12
-                        border.color: freqCombo.activeFocus ? appWindow.accentColor : "transparent"
-                        border.width: 2
+                        radius: 18
+                        border.width: nameField.activeFocus ? 2 : 0
+                        border.color: appWindow.accentColor
+                        // Иконка карандаша справа
+                        Text { text: "✏️"; anchors.right: parent.right; anchors.rightMargin: 15; anchors.verticalCenter: parent.verticalCenter; opacity: 0.5; font.pixelSize: 16 }
+                    }
+                }
+            }
+
+            // --- 2. ОПИСАНИЕ ---
+            ColumnLayout {
+                spacing: 10; Layout.fillWidth: true
+                Text { text: "Описание (опционально)"; color: appWindow.subTextColor; font.bold: true; font.pixelSize: 14 }
+
+                TextField {
+                    id: descField
+                    Layout.fillWidth: true; Layout.preferredHeight: 60
+                    placeholderText: "Ради чего вы это делаете?"
+                    placeholderTextColor: "#606070"
+                    color: "white"; font.pixelSize: 16
+                    leftPadding: 20; rightPadding: 20
+
+                    background: Rectangle {
+                        color: appWindow.surfaceColor
+                        radius: 18
+                        border.width: descField.activeFocus ? 2 : 0
+                        border.color: appWindow.accentColor
+                    }
+                }
+            }
+
+            // --- 3. ВЫБОР ЧАСТОТЫ (КАРТОЧКИ) ---
+            ColumnLayout {
+                spacing: 15; Layout.fillWidth: true
+                Text { text: "Как часто?"; color: appWindow.subTextColor; font.bold: true; font.pixelSize: 14 }
+
+                RowLayout {
+                    spacing: 15; Layout.fillWidth: true
+
+                    // Карточка: Каждый день
+                    Rectangle {
+                        Layout.fillWidth: true; height: 110
+                        radius: 20
+                        color: selectedFreqIndex === 0 ? appWindow.accentColor : appWindow.surfaceColor
+                        Behavior on color { ColorAnimation { duration: 200 } }
+
+                        Column {
+                            anchors.centerIn: parent; spacing: 8
+                            Text { text: "🔥"; font.pixelSize: 28 }
+                            Text { text: "Каждый день"; color: "white"; font.bold: true; font.pixelSize: 14 }
+                        }
+                        MouseArea { anchors.fill: parent; onClicked: selectedFreqIndex = 0 }
+
+                        // Галочка выбора
+                        Rectangle {
+                            width: 24; height: 24; radius: 12
+                            color: "white"; visible: selectedFreqIndex === 0
+                            anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 10
+                            Text { text: "✓"; color: appWindow.accentColor; anchors.centerIn: parent; font.bold: true }
+                        }
+                    }
+
+                    // Карточка: Раз в неделю
+                    Rectangle {
+                        Layout.fillWidth: true; height: 110
+                        radius: 20
+                        color: selectedFreqIndex === 1 ? appWindow.accentColor : appWindow.surfaceColor
+                        Behavior on color { ColorAnimation { duration: 200 } }
+
+                        Column {
+                            anchors.centerIn: parent; spacing: 8
+                            Text { text: "📅"; font.pixelSize: 28 }
+                            Text { text: "Раз в неделю"; color: "white"; font.bold: true; font.pixelSize: 14 }
+                        }
+                        MouseArea { anchors.fill: parent; onClicked: selectedFreqIndex = 1 }
+
+                        Rectangle {
+                            width: 24; height: 24; radius: 12
+                            color: "white"; visible: selectedFreqIndex === 1
+                            anchors.top: parent.top; anchors.right: parent.right; anchors.margins: 10
+                            Text { text: "✓"; color: appWindow.accentColor; anchors.centerIn: parent; font.bold: true }
+                        }
                     }
                 }
             }
 
             Item { height: 20 }
 
-            // Кнопка Сохранить (работает и для создания, и для обновления)
+            // --- 4. КНОПКА СОХРАНЕНИЯ ---
             Button {
-                Layout.fillWidth: true; Layout.preferredHeight: 55
+                Layout.fillWidth: true; Layout.preferredHeight: 60
                 background: Rectangle {
                     color: nameField.text.length > 0 ? appWindow.accentColor : "#3A3A4C"
-                    radius: 16
+                    radius: 20
                 }
-                contentItem: Text {
-                    text: habitId === -1 ? "Создать" : "Сохранить изменения"
-                    color: nameField.text.length > 0 ? "white" : "#808090"
-                    font.bold: true; font.pixelSize: 16
-                    horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                contentItem: Row {
+                    spacing: 10; anchors.centerIn: parent
+                    Text { text: habitId === -1 ? "✨" : "💾"; font.pixelSize: 20 }
+                    Text {
+                        text: habitId === -1 ? "Создать привычку" : "Сохранить изменения"
+                        color: nameField.text.length > 0 ? "white" : "#808090"
+                        font.bold: true; font.pixelSize: 16
+                    }
                 }
                 enabled: nameField.text.length > 0
                 onClicked: {
                     if (habitId === -1) {
-                        // Режим создания
-                        dbHandler.addHabit(nameField.text, descField.text, freqCombo.currentIndex)
+                        dbHandler.addHabit(nameField.text, descField.text, selectedFreqIndex)
                     } else {
-                        // Режим редактирования
-                        dbHandler.updateHabit(habitId, nameField.text, descField.text, freqCombo.currentIndex)
+                        dbHandler.updateHabit(habitId, nameField.text, descField.text, selectedFreqIndex)
                     }
                     stackView.pop()
                     if (stackView.currentItem && stackView.currentItem.refreshList) {
@@ -160,21 +193,17 @@ Page {
                 }
             }
 
-            // Кнопка УДАЛИТЬ (Видна только в режиме редактирования)
+            // --- 5. УДАЛЕНИЕ (только при редактировании) ---
             Button {
                 visible: habitId !== -1
-                Layout.fillWidth: true; Layout.preferredHeight: 55
-                background: Rectangle {
-                    color: "transparent"
-                    border.color: appWindow.dangerColor
-                    border.width: 1
-                    radius: 16
-                }
+                Layout.fillWidth: true; Layout.preferredHeight: 50
+                background: Rectangle { color: "transparent" }
                 contentItem: Text {
-                    text: "Удалить привычку"
+                    text: "Удалить эту привычку"
                     color: appWindow.dangerColor
-                    font.pixelSize: 16
-                    horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                    font.pixelSize: 14
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
                 }
                 onClicked: {
                     dbHandler.removeHabit(habitId)
@@ -185,7 +214,7 @@ Page {
                 }
             }
 
-            Item { height: 50 } // Отступ снизу
+            Item { height: 40 } // Отступ снизу
         }
     }
 }
