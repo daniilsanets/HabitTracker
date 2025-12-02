@@ -36,7 +36,7 @@ Page {
         }
 
         Text {
-            text: "Habit Tracker Pro"
+            text: "Habit Tracker"
             color: "white"
             font.bold: true
             font.pixelSize: 22
@@ -44,7 +44,7 @@ Page {
         }
 
         Text {
-            text: "Версия 1.0.0\nDesigned by You"
+            text: "Версия 2.1.0\nDesigned by Ракицкий Тимофей Группа Су-31"
             color: appWindow.subTextColor
             horizontalAlignment: Text.AlignHCenter
             anchors.horizontalCenter: parent.horizontalCenter
