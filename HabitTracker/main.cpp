@@ -1,10 +1,15 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickStyle> // <--- 1. Добавляем этот заголовок
 #include "databasehandler.h"
 
 int main(int argc, char *argv[])
 {
+    // 2. Устанавливаем стиль "Basic" ПЕРЕД созданием app.
+    // Это разрешает кастомизацию (background, contentItem) для кнопок.
+    QQuickStyle::setStyle("Basic");
+
     QGuiApplication app(argc, argv);
 
     // Инициализация базы данных
@@ -16,7 +21,7 @@ int main(int argc, char *argv[])
     // Передаем объект базы данных в QML
     engine.rootContext()->setContextProperty("dbHandler", &dbHandler);
 
-    const QUrl url(QStringLiteral("qrc:/main.qml")); // Проверьте путь, если используете Qt6, может быть просто "qrc:/main.qml"
+    const QUrl url(QStringLiteral("qrc:/main.qml"));
 
     QObject::connect(
         &engine,

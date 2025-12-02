@@ -28,93 +28,66 @@ Page {
         spacing: 15; clip: true
 
         delegate: Rectangle {
-            width: parent.width * 0.9; height: 100 // Увеличили высоту
+            width: parent.width * 0.9; height: 100
             radius: 20
             color: appWindow.surfaceColor
             anchors.horizontalCenter: parent.horizontalCenter
 
             RowLayout {
                 anchors.fill: parent; anchors.margins: 20; spacing: 20
-
-                // Левая часть: Круговой индикатор прогресса (Canvas)
                 Item {
                     Layout.preferredWidth: 60; Layout.preferredHeight: 60
-
                     Canvas {
                         anchors.fill: parent
                         onPaint: {
                             var ctx = getContext("2d");
-                            var centerX = width / 2;
-                            var centerY = height / 2;
-                            var radius = width / 2 - 4; // Отступ для толщины
-
+                            var centerX = width / 2; var centerY = height / 2;
+                            var radius = width / 2 - 4;
                             ctx.reset();
+                            ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                            ctx.lineWidth = 6; ctx.strokeStyle = "#3A3A4C"; ctx.stroke();
 
-                            // Серый круг (фон)
-                            ctx.beginPath();
-                            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-                            ctx.lineWidth = 6;
-                            ctx.strokeStyle = "#3A3A4C";
-                            ctx.stroke();
-
-                            // Цветной круг (прогресс)
-                            // Примерная логика: (total completions % 30) / 30 * 2PI (для визуализации месячной цели)
-                            // Или просто: макс 30 дней
                             var percent = Math.min(model.count, 30) / 30;
-                            var endAngle = (percent * 2 * Math.PI) - (Math.PI / 2); // -90 deg start
-
-                            ctx.beginPath();
-                            ctx.arc(centerX, centerY, radius, -Math.PI / 2, endAngle);
-                            ctx.lineWidth = 6;
-                            ctx.strokeStyle = appWindow.accentColor;
-                            ctx.lineCap = "round";
-                            ctx.stroke();
+                            var endAngle = (percent * 2 * Math.PI) - (Math.PI / 2);
+                            ctx.beginPath(); ctx.arc(centerX, centerY, radius, -Math.PI / 2, endAngle);
+                            ctx.lineWidth = 6; ctx.strokeStyle = appWindow.accentColor; ctx.lineCap = "round"; ctx.stroke();
                         }
                     }
-                    // Число внутри круга
-                    Text {
-                        anchors.centerIn: parent
-                        text: model.count
-                        color: "white"; font.bold: true; font.pixelSize: 16
-                    }
+                    Text { anchors.centerIn: parent; text: model.count; color: "white"; font.bold: true; font.pixelSize: 16 }
                 }
 
-                // Правая часть: Текст и Стрик
                 ColumnLayout {
                     Layout.fillWidth: true
-                    Text {
-                        text: model.name; color: "white"; font.bold: true; font.pixelSize: 18
-                    }
-
-                    // Блок СТРИКА (Огонек)
+                    Text { text: model.name; color: "white"; font.bold: true; font.pixelSize: 18 }
                     RowLayout {
                         spacing: 5
                         Text {
                             text: "🔥 " + model.streak + " дн. подряд"
-                            // Если стрик > 0, цвет оранжевый, иначе серый
                             color: model.streak > 0 ? "#FFAA00" : appWindow.subTextColor
                             font.bold: true; font.pixelSize: 14
                         }
                     }
-
-                    Text {
-                         text: "Всего выполнено раз: " + model.count
-                         color: appWindow.subTextColor; font.pixelSize: 12
-                    }
+                    Text { text: "Всего выполнено: " + model.count; color: appWindow.subTextColor; font.pixelSize: 12 }
                 }
             }
         }
     }
 
-    Component.onCompleted: {
-        var list = dbHandler.getHabits()
+    // ЛОГИКА ЗАГРУЗКИ
+    function refreshStats() {
+        statsModel.clear()
+        // Вызываем БЕЗ аргументов (благодаря правке в C++, это вернет все привычки)
+        var list = dbHandler.getHabits("")
+
         for(var i=0; i<list.length; i++) {
             var parts = list[i].split(":")
             var id = parseInt(parts[0])
             var name = parts[1]
             var count = dbHandler.getTotalCompletions(id)
-            var streak = dbHandler.getCurrentStreak(id) // Получаем стрик
+            var streak = dbHandler.getCurrentStreak(id)
             statsModel.append({"name": name, "count": count, "streak": streak})
         }
     }
+
+    Component.onCompleted: refreshStats()
 }
