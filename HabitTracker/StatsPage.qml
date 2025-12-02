@@ -7,67 +7,99 @@ Page {
 
     header: Item {
         height: 60
-        Text {
-            text: "< Назад"
-            color: appWindow.accentColor
-            anchors.left: parent.left
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: 20
+        Item {
+            width: 80; height: parent.height; anchors.left: parent.left
             MouseArea { anchors.fill: parent; onClicked: stackView.pop() }
+            RowLayout {
+                anchors.centerIn: parent; spacing: 5
+                Text { text: "‹"; color: appWindow.accentColor; font.pixelSize: 36; font.bold: true }
+                Text { text: "Назад"; color: appWindow.accentColor; font.pixelSize: 16; font.bold: true }
+            }
         }
         Text {
             text: "Ваш прогресс"
-            color: "white"
-            font.bold: true
-            font.pixelSize: 18
-            anchors.centerIn: parent
+            color: "white"; font.bold: true; font.pixelSize: 18; anchors.centerIn: parent
         }
     }
 
     ListView {
-        anchors.fill: parent
-        anchors.topMargin: 20
+        anchors.fill: parent; anchors.topMargin: 20
         model: ListModel { id: statsModel }
-        spacing: 15
+        spacing: 15; clip: true
 
         delegate: Rectangle {
-            width: parent.width * 0.9
-            height: 80
-            radius: 15
+            width: parent.width * 0.9; height: 100 // Увеличили высоту
+            radius: 20
             color: appWindow.surfaceColor
             anchors.horizontalCenter: parent.horizontalCenter
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 15
+            RowLayout {
+                anchors.fill: parent; anchors.margins: 20; spacing: 20
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    Text {
-                        text: model.name
-                        color: "white"
-                        font.bold: true
-                        Layout.fillWidth: true
+                // Левая часть: Круговой индикатор прогресса (Canvas)
+                Item {
+                    Layout.preferredWidth: 60; Layout.preferredHeight: 60
+
+                    Canvas {
+                        anchors.fill: parent
+                        onPaint: {
+                            var ctx = getContext("2d");
+                            var centerX = width / 2;
+                            var centerY = height / 2;
+                            var radius = width / 2 - 4; // Отступ для толщины
+
+                            ctx.reset();
+
+                            // Серый круг (фон)
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                            ctx.lineWidth = 6;
+                            ctx.strokeStyle = "#3A3A4C";
+                            ctx.stroke();
+
+                            // Цветной круг (прогресс)
+                            // Примерная логика: (total completions % 30) / 30 * 2PI (для визуализации месячной цели)
+                            // Или просто: макс 30 дней
+                            var percent = Math.min(model.count, 30) / 30;
+                            var endAngle = (percent * 2 * Math.PI) - (Math.PI / 2); // -90 deg start
+
+                            ctx.beginPath();
+                            ctx.arc(centerX, centerY, radius, -Math.PI / 2, endAngle);
+                            ctx.lineWidth = 6;
+                            ctx.strokeStyle = appWindow.accentColor;
+                            ctx.lineCap = "round";
+                            ctx.stroke();
+                        }
                     }
+                    // Число внутри круга
                     Text {
-                        text: model.count + " раз(а)"
-                        color: appWindow.accentColor
-                        font.bold: true
+                        anchors.centerIn: parent
+                        text: model.count
+                        color: "white"; font.bold: true; font.pixelSize: 16
                     }
                 }
 
-                // Прогресс бар (визуальный, макс 30 дней для примера)
-                Rectangle {
+                // Правая часть: Текст и Стрик
+                ColumnLayout {
                     Layout.fillWidth: true
-                    height: 8
-                    color: "#151520" // Темный фон полосы
-                    radius: 4
+                    Text {
+                        text: model.name; color: "white"; font.bold: true; font.pixelSize: 18
+                    }
 
-                    Rectangle {
-                        width: parent.width * (Math.min(model.count, 30) / 30)
-                        height: parent.height
-                        radius: 4
-                        color: appWindow.accentColor
+                    // Блок СТРИКА (Огонек)
+                    RowLayout {
+                        spacing: 5
+                        Text {
+                            text: "🔥 " + model.streak + " дн. подряд"
+                            // Если стрик > 0, цвет оранжевый, иначе серый
+                            color: model.streak > 0 ? "#FFAA00" : appWindow.subTextColor
+                            font.bold: true; font.pixelSize: 14
+                        }
+                    }
+
+                    Text {
+                         text: "Всего выполнено раз: " + model.count
+                         color: appWindow.subTextColor; font.pixelSize: 12
                     }
                 }
             }
@@ -81,7 +113,8 @@ Page {
             var id = parseInt(parts[0])
             var name = parts[1]
             var count = dbHandler.getTotalCompletions(id)
-            statsModel.append({"name": name, "count": count})
+            var streak = dbHandler.getCurrentStreak(id) // Получаем стрик
+            statsModel.append({"name": name, "count": count, "streak": streak})
         }
     }
 }
