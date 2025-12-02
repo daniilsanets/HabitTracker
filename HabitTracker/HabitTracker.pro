@@ -2,12 +2,11 @@ QT += quick core gui qml sql quickcontrols2
 QT += core5compat
 
 SOURCES += \
+        databasehandler.cpp \
         main.cpp
 
-resources.files = main.qml 
-resources.prefix = /$${TARGET}
-RESOURCES += resources \
-    build/Desktop_Qt_6_10_0_MinGW_64_bit-Debug/qml.qrc
+RESOURCES += \
+    qml.qrc
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
 QML_IMPORT_PATH =
@@ -19,3 +18,13 @@ QML_DESIGNER_IMPORT_PATH =
 qnx: target.path = /tmp/$${TARGET}/bin
 else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
+
+HEADERS += \
+    databasehandler.h
+
+DISTFILES += \
+    AboutPage.qml \
+    AddHabitPage.qml \
+    HabitPage.qml \
+    StatsPage.qml \
+    main.qml

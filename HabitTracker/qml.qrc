@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>HabitPage.qml</file>
+        <file>AddHabitPage.qml</file>
+        <file>AboutPage.qml</file>
+        <file>StatsPage.qml</file>
+    </qresource>
+</RCC>

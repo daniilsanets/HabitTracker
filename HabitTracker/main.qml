@@ -1,8 +1,15 @@
 import QtQuick
+import QtQuick.Controls
 
-Window {
-    width: 640
-    height: 480
+ApplicationWindow {
+    width: 400
+    height: 680
     visible: true
-    title: qsTr("Hello World")
+    title: qsTr("Habit Tracker")
+
+    StackView {
+        id: stackView
+        anchors.fill: parent
+        initialItem: "HabitPage.qml"
+    }
 }
