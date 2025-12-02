@@ -2,40 +2,62 @@ import QtQuick
 import QtQuick.Controls
 
 Page {
-    title: "О программе"
+    background: Rectangle { color: appWindow.bgColor }
 
-    header: ToolBar {
-        ToolButton {
-            text: "<"
-            onClicked: stackView.pop()
-        }
-        Label {
-            text: "О программе"
-            anchors.centerIn: parent
+    header: Item {
+        height: 60
+        Text {
+            text: "< Назад"
+            color: appWindow.accentColor
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.leftMargin: 20
+            MouseArea { anchors.fill: parent; onClicked: stackView.pop() }
         }
     }
 
     Column {
         anchors.centerIn: parent
-        spacing: 10
-        width: parent.width * 0.9
+        width: parent.width * 0.8
+        spacing: 20
+
+        Rectangle {
+            width: 100; height: 100
+            radius: 20
+            color: appWindow.accentColor
+            anchors.horizontalCenter: parent.horizontalCenter
+            Text {
+                text: "H"
+                font.pixelSize: 50
+                font.bold: true
+                color: "white"
+                anchors.centerIn: parent
+            }
+        }
 
         Text {
-            text: "Habit Tracker v1.0"
+            text: "Habit Tracker Pro"
+            color: "white"
             font.bold: true
-            font.pointSize: 18
+            font.pixelSize: 22
+            anchors.horizontalCenter: parent.horizontalCenter
         }
 
         Text {
-            text: "Автор: Ваше Имя\nГруппа: Ваша Группа"
+            text: "Версия 1.0.0\nDesigned by You"
+            color: appWindow.subTextColor
+            horizontalAlignment: Text.AlignHCenter
+            anchors.horizontalCenter: parent.horizontalCenter
         }
 
+        Rectangle { height: 1; width: parent.width; color: appWindow.surfaceColor }
+
         Text {
+            text: "Современный трекер привычек, написанный на C++ и Qt/QML. Позволяет отслеживать прогресс, вести календарь и анализировать статистику."
+            color: "white"
             wrapMode: Text.WordWrap
             width: parent.width
-            text: "Задание: Написать мобильное приложение для информационной системы. " +
-                  "Программа помогает отслеживать выполнение ежедневных привычек. " +
-                  "Хранение истории в БД."
+            horizontalAlignment: Text.AlignHCenter
         }
     }
 }

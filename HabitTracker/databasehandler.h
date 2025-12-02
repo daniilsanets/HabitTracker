@@ -8,6 +8,11 @@
 #include <QDebug>
 #include <QDate>
 
+struct HabitStat {
+    QString name;
+    int completedCount;
+};
+
 class DatabaseHandler : public QObject
 {
     Q_OBJECT
@@ -15,21 +20,15 @@ public:
     explicit DatabaseHandler(QObject *parent = nullptr);
     ~DatabaseHandler();
 
-    // Подключение к БД
     Q_INVOKABLE void connectToDatabase();
-
-    // Добавление новой привычки
     Q_INVOKABLE bool addHabit(const QString &name, const QString &description);
-
-    // Получение списка привычек (для простоты вернем список строк "ID: Имя")
-    // В серьезном проекте здесь используют QAbstractListModel
     Q_INVOKABLE QList<QString> getHabits();
-
-    // Отметить привычку выполненной на сегодня
     Q_INVOKABLE void checkHabit(int id, bool checked);
-
-    // Проверить, выполнена ли привычка сегодня
     Q_INVOKABLE bool isHabitCompletedToday(int id);
+
+    // Новое: для удаления и статистики
+    Q_INVOKABLE void removeHabit(int id);
+    Q_INVOKABLE int getTotalCompletions(int id);
 
 private:
     QSqlDatabase m_db;
