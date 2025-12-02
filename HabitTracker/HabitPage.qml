@@ -7,10 +7,9 @@ Page {
     background: Rectangle { color: appWindow.bgColor }
 
     property date selectedDate: new Date()
-
-    // Вспомогательная дата для выбора в календаре (какой месяц смотрим)
     property date pickerDate: new Date()
 
+    // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
     function parseSqlDate(dateStr) {
         if (!dateStr || dateStr === "") return new Date()
         var p = dateStr.split("-")
@@ -30,15 +29,15 @@ Page {
         return new Date(temp.setDate(diff));
     }
 
-    // Вспомогательные функции для Календаря-Пикера
-    function getDaysInMonth(d) {
-        return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-    }
+    function getDaysInMonth(d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); }
+    function getFirstDayOffset(d) { var f = new Date(d.getFullYear(), d.getMonth(), 1).getDay(); return f === 0 ? 6 : f - 1; }
 
-    function getFirstDayOffset(d) {
-        // 0 - Пн, 6 - Вс для нашей сетки
-        var f = new Date(d.getFullYear(), d.getMonth(), 1).getDay();
-        return f === 0 ? 6 : f - 1;
+    // Проверка на будущее (блокировка)
+    function isFutureDate() {
+        var now = new Date();
+        var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        var selected = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+        return selected > today;
     }
 
     function refreshList() {
@@ -58,17 +57,11 @@ Page {
                 var createdDate = parseSqlDate(createdStr)
                 if (createdDate.getDay() !== selectedDate.getDay()) continue
             }
-
             var isDone = dbHandler.isHabitCompleted(id, dateStr)
-
-            habitModel.append({
-                "habitId": id, "name": name, "description": desc,
-                "frequency": freq, "done": isDone
-            })
+            habitModel.append({ "habitId": id, "name": name, "description": desc, "frequency": freq, "done": isDone })
         }
     }
 
-    // --- ЛОГИКА НЕДЕЛЬНОЙ ЛЕНТЫ ---
     function getDateOfButton(index) {
         var monday = getMonday(selectedDate)
         var result = new Date(monday)
@@ -76,17 +69,9 @@ Page {
         return result
     }
 
-    function isSelected(index) {
-        return toSqlDate(getDateOfButton(index)) === toSqlDate(selectedDate)
-    }
+    function isSelected(index) { return toSqlDate(getDateOfButton(index)) === toSqlDate(selectedDate) }
+    function isToday(index) { return toSqlDate(getDateOfButton(index)) === toSqlDate(new Date()) }
 
-    function isToday(index) {
-        var btnDate = getDateOfButton(index)
-        var today = new Date()
-        return toSqlDate(btnDate) === toSqlDate(today)
-    }
-
-    // Функции смены недели (вызываются анимацией)
     function shiftDate(weeks) {
         var d = new Date(selectedDate)
         d.setDate(d.getDate() + (weeks * 7))
@@ -97,41 +82,34 @@ Page {
     Component.onCompleted: refreshList()
 
     header: Column {
-        width: parent.width; spacing: 10; padding: 20; topPadding: 40
+        width: parent.width
+        spacing: 10
+        topPadding: 40
+        // Убрали padding: 20 отсюда, будем задавать ширину контента явно
 
         // ЗАГОЛОВОК
         RowLayout {
-            width: parent.width
+            // Явно задаем ширину с отступами
+            width: parent.width - 40
+            anchors.horizontalCenter: parent.horizontalCenter
             spacing: 10
+
             Column {
                 Text {
                     text: toSqlDate(selectedDate) === toSqlDate(new Date()) ? "Сегодня" : Qt.formatDate(selectedDate, "d MMMM")
                     font.pixelSize: 28; font.bold: true; color: "white"
                 }
-                Text {
-                    text: "Ваши привычки"
-                    font.pixelSize: 14; color: appWindow.subTextColor
-                }
+                Text { text: "Ваши привычки"; font.pixelSize: 14; color: appWindow.subTextColor }
             }
-
-            // КНОПКА КАЛЕНДАРЯ
             Button {
                 Layout.alignment: Qt.AlignVCenter
-                background: Rectangle {
-                    color: appWindow.surfaceColor; radius: 12
-                    border.color: appWindow.subTextColor; border.width: 1
-                }
+                background: Rectangle { color: appWindow.surfaceColor; radius: 12; border.color: appWindow.subTextColor; border.width: 1 }
                 contentItem: Row {
                     spacing: 6; leftPadding: 10; rightPadding: 10
                     Text { text: "📅"; font.pixelSize: 16; anchors.verticalCenter: parent.verticalCenter }
                 }
-                onClicked: {
-                    // При открытии устанавливаем дату пикера на выбранную дату
-                    pickerDate = new Date(selectedDate)
-                    datePickerDialog.open()
-                }
+                onClicked: { pickerDate = new Date(selectedDate); datePickerDialog.open() }
             }
-
             Button {
                 visible: toSqlDate(selectedDate) !== toSqlDate(new Date())
                 Layout.alignment: Qt.AlignVCenter
@@ -147,31 +125,29 @@ Page {
 
         Item { height: 10 }
 
-        // --- ЛЕНТА ДНЕЙ С ЖИВЫМ СВАЙПОМ ---
+        // --- ЛЕНТА ДНЕЙ ---
         Item {
             id: calendarContainer
-            width: parent.width
+            // Ширина контейнера = ширина экрана минус отступы (20 слева + 20 справа)
+            width: parent.width - 40
             height: 80
+            anchors.horizontalCenter: parent.horizontalCenter
             clip: true
 
-            RowLayout {
+            Row {
                 id: calendarRow
                 width: parent.width
                 spacing: 8
 
-                // Важно: якоря должны быть сброшены, чтобы мы могли менять x вручную
-                // Используем x: 0 по умолчанию
-
                 Repeater {
                     model: 7
                     delegate: Rectangle {
-                        // Растягиваем элементы, чтобы они заполнили ширину контейнера
-                        Layout.preferredWidth: (calendarContainer.width - (8 * 6)) / 7
-                        Layout.preferredHeight: 70
+                        // Точный расчет: (Ширина контейнера - (6 пробелов * 8px)) / 7
+                        width: (calendarContainer.width - 48) / 7
+                        height: 70
+
                         color: isSelected(index) ? appWindow.accentColor : appWindow.surfaceColor
                         radius: 14
-
-                        // Анимация цвета при клике
                         Behavior on color { ColorAnimation { duration: 150 } }
 
                         Column {
@@ -195,89 +171,58 @@ Page {
                 }
             }
 
-            // МУЛЬТИ-СВАЙП MOUSE AREA
             MouseArea {
                 anchors.fill: parent
                 property real startX: 0
                 property bool isDragging: false
-
                 onPressed: (mouse) => {
-                    startX = mouse.x
-                    isDragging = false
-                    // Останавливаем анимации, если они идут
-                    finishSwipeAnim.stop()
-                    bounceBackAnim.stop()
+                    startX = mouse.x; isDragging = false
+                    finishSwipeAnim.stop(); bounceBackAnim.stop()
                 }
-
                 onPositionChanged: (mouse) => {
                     var diff = mouse.x - startX
-                    // Начинаем двигать ряд вслед за пальцем
                     calendarRow.x = diff
                     if (Math.abs(diff) > 10) isDragging = true
                 }
-
                 onReleased: (mouse) => {
-                    // Если сдвинули достаточно далеко - меняем неделю
-                    if (calendarRow.x < -100) {
-                        // Свайп влево (след. неделя)
-                        finishSwipeAnim.toX = -calendarContainer.width
-                        finishSwipeAnim.direction = 1 // Next
+                    if (calendarRow.x < -60) { // Чувствительность свайпа
+                        finishSwipeAnim.toX = -calendarContainer.width - 20
+                        finishSwipeAnim.direction = 1
                         finishSwipeAnim.start()
-                    } else if (calendarRow.x > 100) {
-                        // Свайп вправо (пред. неделя)
-                        finishSwipeAnim.toX = calendarContainer.width
-                        finishSwipeAnim.direction = -1 // Prev
+                    } else if (calendarRow.x > 60) {
+                        finishSwipeAnim.toX = calendarContainer.width + 20
+                        finishSwipeAnim.direction = -1
                         finishSwipeAnim.start()
                     } else {
-                        // Если сдвинули мало - возвращаем на место
-                        if (isDragging) bounceBackAnim.start()
-                        else {
-                            // Это был клик
-                            var itemWidth = width / 7
-                            var index = Math.floor(mouse.x / itemWidth)
+                        if (!isDragging) {
+                            // Клик: пересчитываем координаты с учетом ширины элемента + отступа
+                            var itemTotalWidth = ((calendarContainer.width - 48) / 7) + 8
+                            // Добавляем половину отступа для точности попадания
+                            var index = Math.floor(mouse.x / itemTotalWidth)
                             if (index >= 0 && index < 7) {
                                 selectedDate = getDateOfButton(index)
                                 refreshList()
                             }
-                            bounceBackAnim.start() // На всякий случай выравниваем
                         }
+                        bounceBackAnim.start()
                     }
                 }
             }
         }
     }
 
-    // Анимация завершения свайпа (улетает за край -> меняет дату -> прилетает с другой стороны)
     SequentialAnimation {
         id: finishSwipeAnim
-        property int direction: 0 // 1 = Next, -1 = Prev
+        property int direction: 0
         property int toX: 0
-
-        // 1. Долетаем до края
         NumberAnimation { target: calendarRow; property: "x"; to: finishSwipeAnim.toX; duration: 200; easing.type: Easing.OutQuad }
-
-        // 2. Мгновенно меняем дату и телепортируемся на противоположный край
-        ScriptAction {
-            script: {
-                shiftDate(finishSwipeAnim.direction)
-                // Если ушли влево, появляемся справа
-                calendarRow.x = (finishSwipeAnim.direction === 1) ? calendarContainer.width : -calendarContainer.width
-            }
-        }
-
-        // 3. Плавно возвращаемся в центр
+        ScriptAction { script: {
+            shiftDate(finishSwipeAnim.direction)
+            calendarRow.x = (finishSwipeAnim.direction === 1) ? calendarContainer.width : -calendarContainer.width
+        }}
         NumberAnimation { target: calendarRow; property: "x"; to: 0; duration: 250; easing.type: Easing.OutBack }
     }
-
-    // Анимация возврата (если передумали свайпать)
-    NumberAnimation {
-        id: bounceBackAnim
-        target: calendarRow
-        property: "x"
-        to: 0
-        duration: 300
-        easing.type: Easing.OutBack
-    }
+    NumberAnimation { id: bounceBackAnim; target: calendarRow; property: "x"; to: 0; duration: 300; easing.type: Easing.OutBack }
 
     ListView {
         id: listView
@@ -289,16 +234,23 @@ Page {
             height: Math.max(75, contentLayout.implicitHeight + 30)
             radius: 18
             color: appWindow.surfaceColor
-            anchors.horizontalCenter: parent.horizontalCenter
+
+            // ИСПРАВЛЕНИЕ ОШИБКИ horizontalCenter of null
+            // Используем безопасный доступ или центрируем через ListView
+            anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
+
+            // Бледность для будущих дат
+            opacity: isFutureDate() ? 0.5 : 1.0
 
             MouseArea {
                 anchors.fill: parent; width: parent.width - 60
                 onClicked: {
+                    // ИСПРАВЛЕНИЕ connect of undefined: убрали connect()
                     stackView.push("AddHabitPage.qml", {
                         habitId: model.habitId, initialName: model.name,
                         initialDesc: model.description, initialFreq: model.frequency
                     })
-                    stackView.currentItem.onClosing.connect(refreshList)
+                    // AddHabitPage сам вызовет refreshList, connect здесь не нужен
                 }
             }
 
@@ -325,14 +277,19 @@ Page {
                     }
                 }
                 Rectangle { width: 1; height: 30; color: "#404050"; Layout.alignment: Qt.AlignVCenter }
+
                 Rectangle {
                     width: 34; height: 34; radius: 12
                     color: model.done ? appWindow.accentColor : "transparent"
                     border.color: model.done ? appWindow.accentColor : "#404050"
                     border.width: 2; Layout.alignment: Qt.AlignVCenter
+
                     Text { anchors.centerIn: parent; text: "✓"; color: "white"; font.bold: true; visible: model.done }
+
                     MouseArea {
                         anchors.fill: parent
+                        // БЛОКИРОВКА ГАЛОЧКИ В БУДУЩЕМ
+                        enabled: !isFutureDate()
                         onClicked: {
                             var newState = !model.done
                             dbHandler.checkHabit(model.habitId, toSqlDate(selectedDate), newState)
@@ -346,8 +303,7 @@ Page {
             visible: habitModel.count === 0
             text: "Нет задач на этот день"
             color: appWindow.subTextColor
-            anchors.centerIn: parent
-            font.pixelSize: 16
+            anchors.centerIn: parent; font.pixelSize: 16
         }
     }
 
@@ -362,115 +318,42 @@ Page {
         }
     }
 
-    // --- ПОЛНОЦЕННЫЙ КАЛЕНДАРЬ ---
     Dialog {
         id: datePickerDialog
         anchors.centerIn: parent
-        width: 340
-        height: 420
-        modal: true
+        width: 340; height: 420; modal: true
         closePolicy: Popup.CloseOnPressOutside
         background: Rectangle { color: appWindow.bgColor; radius: 20; border.color: appWindow.surfaceColor; border.width: 2 }
-
         ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 20
-
-            // Шапка календаря (Месяц Год и стрелки)
+            anchors.fill: parent; anchors.margins: 20
             RowLayout {
                 Layout.fillWidth: true
-                Button {
-                    text: "‹"
-                    background: null
-                    contentItem: Text { text: "‹"; color: appWindow.accentColor; font.pixelSize: 24; horizontalAlignment: Text.AlignHCenter }
-                    onClicked: pickerDate = new Date(pickerDate.getFullYear(), pickerDate.getMonth() - 1, 1)
-                }
-                Text {
-                    text: Qt.formatDate(pickerDate, "MMMM yyyy")
-                    color: "white"
-                    font.bold: true
-                    font.pixelSize: 18
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                }
-                Button {
-                    text: "›"
-                    background: null
-                    contentItem: Text { text: "›"; color: appWindow.accentColor; font.pixelSize: 24; horizontalAlignment: Text.AlignHCenter }
-                    onClicked: pickerDate = new Date(pickerDate.getFullYear(), pickerDate.getMonth() + 1, 1)
-                }
+                Button { text: "‹"; background: null; contentItem: Text { text: "‹"; color: appWindow.accentColor; font.pixelSize: 24; horizontalAlignment: Text.AlignHCenter } onClicked: pickerDate = new Date(pickerDate.getFullYear(), pickerDate.getMonth() - 1, 1) }
+                Text { text: Qt.formatDate(pickerDate, "MMMM yyyy"); color: "white"; font.bold: true; font.pixelSize: 18; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter }
+                Button { text: "›"; background: null; contentItem: Text { text: "›"; color: appWindow.accentColor; font.pixelSize: 24; horizontalAlignment: Text.AlignHCenter } onClicked: pickerDate = new Date(pickerDate.getFullYear(), pickerDate.getMonth() + 1, 1) }
             }
-
-            // Дни недели
             RowLayout {
                 Layout.fillWidth: true
-                Repeater {
-                    model: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
-                    Text {
-                        text: modelData
-                        color: appWindow.subTextColor
-                        font.pixelSize: 12
-                        Layout.fillWidth: true
-                        horizontalAlignment: Text.AlignHCenter
-                    }
-                }
+                Repeater { model: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]; Text { text: modelData; color: appWindow.subTextColor; font.pixelSize: 12; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter } }
             }
-
-            // Сетка дней
             GridLayout {
-                columns: 7
-                Layout.fillWidth: true
-                Layout.fillHeight: true
-
-                // Пустые ячейки (отступ)
-                Repeater {
-                    model: getFirstDayOffset(pickerDate)
-                    Item { Layout.fillWidth: true; Layout.fillHeight: true }
-                }
-
-                // Дни месяца
+                columns: 7; Layout.fillWidth: true; Layout.fillHeight: true
+                Repeater { model: getFirstDayOffset(pickerDate); Item { Layout.fillWidth: true; Layout.fillHeight: true } }
                 Repeater {
                     model: getDaysInMonth(pickerDate)
-
                     Rectangle {
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        Layout.preferredHeight: 40
-                        radius: 20
-
-                        // Проверяем, является ли этот день выбранным
+                        Layout.fillWidth: true; Layout.fillHeight: true; Layout.preferredHeight: 40; radius: 20
                         property var currentDay: new Date(pickerDate.getFullYear(), pickerDate.getMonth(), index + 1)
                         property bool isSelected: toSqlDate(currentDay) === toSqlDate(selectedDate)
-
                         color: isSelected ? appWindow.accentColor : "transparent"
                         border.color: isSelected ? "transparent" : appWindow.surfaceColor
                         border.width: isSelected ? 0 : 1
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: index + 1
-                            color: parent.isSelected ? "white" : appWindow.textColor
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                selectedDate = parent.currentDay
-                                refreshList()
-                                datePickerDialog.close()
-                            }
-                        }
+                        Text { anchors.centerIn: parent; text: index + 1; color: parent.isSelected ? "white" : appWindow.textColor }
+                        MouseArea { anchors.fill: parent; onClicked: { selectedDate = parent.currentDay; refreshList(); datePickerDialog.close() } }
                     }
                 }
             }
-
-            Button {
-                text: "Закрыть"
-                Layout.alignment: Qt.AlignHCenter
-                background: Rectangle { color: appWindow.surfaceColor; radius: 10 }
-                contentItem: Text { text: "Отмена"; color: "white"; anchors.centerIn: parent }
-                onClicked: datePickerDialog.close()
-            }
+            Button { text: "Закрыть"; Layout.alignment: Qt.AlignHCenter; background: Rectangle { color: appWindow.surfaceColor; radius: 10 } contentItem: Text { text: "Отмена"; color: "white"; anchors.centerIn: parent } onClicked: datePickerDialog.close() }
         }
     }
 }
