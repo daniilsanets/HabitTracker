@@ -170,15 +170,31 @@ Page {
                     color: nameField.text.length > 0 ? appWindow.accentColor : "#3A3A4C"
                     radius: 20
                 }
-                contentItem: Row {
-                    spacing: 10; anchors.centerIn: parent
-                    Text { text: habitId === -1 ? "✨" : "💾"; font.pixelSize: 20 }
-                    Text {
-                        text: habitId === -1 ? "Создать привычку" : "Сохранить изменения"
-                        color: nameField.text.length > 0 ? "white" : "#808090"
-                        font.bold: true; font.pixelSize: 16
+
+                // Используем Item как контейнер, чтобы anchors работали идеально
+                contentItem: Item {
+                    anchors.fill: parent
+
+                    Row {
+                        spacing: 10
+                        anchors.centerIn: parent // Центрируем Row внутри Item
+
+                        Text {
+                            text: habitId === -1 ? "✨" : "💾"
+                            font.pixelSize: 20
+                            // Важно: выравнивание по вертикали, чтобы иконка и текст были на одной линии
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+
+                        Text {
+                            text: habitId === -1 ? "Создать привычку" : "Сохранить изменения"
+                            color: nameField.text.length > 0 ? "white" : "#808090"
+                            font.bold: true; font.pixelSize: 16
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                     }
                 }
+
                 enabled: nameField.text.length > 0
                 onClicked: {
                     if (habitId === -1) {
