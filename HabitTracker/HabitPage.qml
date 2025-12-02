@@ -80,145 +80,186 @@ Page {
 
     Component.onCompleted: refreshList()
 
-    header: Column {
+    // --- ЗАГОЛОВОК С ФИКСИРОВАННОЙ ВЕРСТКОЙ ---
+    header: Item {
         width: parent.width
-        spacing: 10
-        topPadding: 40
+        height: 100 // Фиксированная высота для шапки
 
-        // ЗАГОЛОВОК (С ЛОГОТИПОМ-ЭМОДЗИ)
-        RowLayout {
-            width: parent.width - 40
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 10
+        // Контейнер с отступами
+        Item {
+            anchors.fill: parent
+            anchors.leftMargin: 20
+            anchors.rightMargin: 20
+            anchors.topMargin: 40
+            anchors.bottomMargin: 10
 
-            // --- ЛОГОТИП (ЭМОДЗИ) ---
-            Rectangle {
-                width: 50; height: 50
-                radius: 16
-                color: appWindow.surfaceColor // Фон под логотипом
-                border.color: appWindow.subTextColor
-                border.width: 1
+            // ЛЕВАЯ ЧАСТЬ: Лого + Текст
+            Row {
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 12
 
-                Text {
-                    text: "✨" // Эмодзи-логотип (можно поменять на ✅, 🔥, 📅)
-                    font.pixelSize: 32
-                    anchors.centerIn: parent
+                // Логотип
+                Rectangle {
+                    width: 50; height: 50
+                    radius: 16
+                    color: appWindow.surfaceColor
+                    border.color: appWindow.subTextColor
+                    border.width: 1
+                    Text {
+                        text: "✨"
+                        font.pixelSize: 28
+                        anchors.centerIn: parent
+                    }
+                }
+
+                // Дата и подпись
+                Column {
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+                    Text {
+                        // Используем "d MMM" для сокращенного месяца (3 дек.)
+                        text: toSqlDate(selectedDate) === toSqlDate(new Date()) ? "Сегодня" : Qt.formatDate(selectedDate, "d MMM")
+                        font.pixelSize: 24
+                        font.bold: true
+                        color: "white"
+                    }
+                    Text {
+                        text: "Ваши привычки"
+                        font.pixelSize: 14
+                        color: appWindow.subTextColor
+                    }
                 }
             }
 
-            // Текст
-            Column {
-                Layout.alignment: Qt.AlignVCenter
-                Text {
-                    text: toSqlDate(selectedDate) === toSqlDate(new Date()) ? "Сегодня" : Qt.formatDate(selectedDate, "d MMMM")
-                    font.pixelSize: 24; font.bold: true; color: "white"
+            // ПРАВАЯ ЧАСТЬ: Кнопки
+            Row {
+                anchors.right: parent.right
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 8
+
+                // Кнопка "В сегодня" (появляется если дата не сегодня)
+                Button {
+                    visible: toSqlDate(selectedDate) !== toSqlDate(new Date())
+                    height: 50
+                    leftPadding: 16
+                    rightPadding: 16
+
+                    background: Rectangle {
+                        color: appWindow.accentColor
+                        radius: 16
+                    }
+                    contentItem: Text {
+                        text: "В сегодня"
+                        color: "white"
+                        font.bold: true
+                        font.pixelSize: 14
+                        verticalAlignment: Text.AlignVCenter
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                    onClicked: { selectedDate = new Date(); refreshList() }
                 }
-                Text { text: "Ваши привычки"; font.pixelSize: 14; color: appWindow.subTextColor }
-            }
 
-            Item { Layout.fillWidth: true }
-
-            // КНОПКА КАЛЕНДАРЯ
-            Button {
-                Layout.alignment: Qt.AlignVCenter
-                Layout.preferredWidth: 50
-                Layout.preferredHeight: 50
-                background: Rectangle { color: appWindow.surfaceColor; radius: 16; border.color: appWindow.subTextColor; border.width: 1 }
-                contentItem: Text { text: "📅"; font.pixelSize: 24; anchors.centerIn: parent }
-                onClicked: { pickerDate = new Date(selectedDate); datePickerDialog.open() }
-            }
-
-            Button {
-                visible: toSqlDate(selectedDate) !== toSqlDate(new Date())
-                Layout.alignment: Qt.AlignVCenter
-                Layout.preferredHeight: 50
-                background: Rectangle { color: appWindow.accentColor; radius: 16 }
-                contentItem: Text {
-                    text: "В сегодня"; color: "white"; font.bold: true; font.pixelSize: 14
-                    leftPadding: 15; rightPadding: 15; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignHCenter
+                // Кнопка Календаря
+                Button {
+                    width: 50; height: 50
+                    background: Rectangle {
+                        color: appWindow.surfaceColor
+                        radius: 16
+                        border.color: appWindow.subTextColor
+                        border.width: 1
+                    }
+                    contentItem: Text {
+                        text: "📅"
+                        font.pixelSize: 24
+                        anchors.centerIn: parent
+                    }
+                    onClicked: {
+                        pickerDate = new Date(selectedDate)
+                        datePickerDialog.open()
+                    }
                 }
-                onClicked: { selectedDate = new Date(); refreshList() }
+            }
+        }
+    }
+
+    // --- ЛЕНТА ДНЕЙ ---
+    Item {
+        id: calendarContainer
+        anchors.top: page.header.bottom // Привязка к низу хедера
+        anchors.topMargin: 10
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: parent.width - 40
+        height: 80
+        clip: true
+
+        Row {
+            id: calendarRow
+            width: parent.width
+            spacing: 8
+
+            Repeater {
+                model: 7
+                delegate: Rectangle {
+                    width: (calendarContainer.width - 48) / 7
+                    height: 70
+                    color: isSelected(index) ? appWindow.accentColor : appWindow.surfaceColor
+                    radius: 14
+                    Behavior on color { ColorAnimation { duration: 150 } }
+
+                    Column {
+                        anchors.centerIn: parent; spacing: 4
+                        Text {
+                            text: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"][index]
+                            color: isSelected(index) ? "white" : appWindow.subTextColor
+                            font.pixelSize: 11; font.bold: true
+                        }
+                        Text {
+                            text: getDateOfButton(index).getDate()
+                            color: "white"; font.bold: true; font.pixelSize: 18
+                        }
+                        Rectangle {
+                            width: 4; height: 4; radius: 2
+                            color: isSelected(index) ? "white" : appWindow.accentColor
+                            visible: isToday(index)
+                        }
+                    }
+                }
             }
         }
 
-        Item { height: 10 }
-
-        // --- ЛЕНТА ДНЕЙ ---
-        Item {
-            id: calendarContainer
-            width: parent.width - 40
-            height: 80
-            anchors.horizontalCenter: parent.horizontalCenter
-            clip: true
-
-            Row {
-                id: calendarRow
-                width: parent.width
-                spacing: 8
-
-                Repeater {
-                    model: 7
-                    delegate: Rectangle {
-                        width: (calendarContainer.width - 48) / 7
-                        height: 70
-                        color: isSelected(index) ? appWindow.accentColor : appWindow.surfaceColor
-                        radius: 14
-                        Behavior on color { ColorAnimation { duration: 150 } }
-
-                        Column {
-                            anchors.centerIn: parent; spacing: 4
-                            Text {
-                                text: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"][index]
-                                color: isSelected(index) ? "white" : appWindow.subTextColor
-                                font.pixelSize: 11; font.bold: true
-                            }
-                            Text {
-                                text: getDateOfButton(index).getDate()
-                                color: "white"; font.bold: true; font.pixelSize: 18
-                            }
-                            Rectangle {
-                                width: 4; height: 4; radius: 2
-                                color: isSelected(index) ? "white" : appWindow.accentColor
-                                visible: isToday(index)
-                            }
-                        }
-                    }
-                }
+        MouseArea {
+            anchors.fill: parent
+            property real startX: 0
+            property bool isDragging: false
+            onPressed: (mouse) => {
+                startX = mouse.x; isDragging = false
+                finishSwipeAnim.stop(); bounceBackAnim.stop()
             }
-
-            MouseArea {
-                anchors.fill: parent
-                property real startX: 0
-                property bool isDragging: false
-                onPressed: (mouse) => {
-                    startX = mouse.x; isDragging = false
-                    finishSwipeAnim.stop(); bounceBackAnim.stop()
-                }
-                onPositionChanged: (mouse) => {
-                    var diff = mouse.x - startX
-                    calendarRow.x = diff
-                    if (Math.abs(diff) > 10) isDragging = true
-                }
-                onReleased: (mouse) => {
-                    if (calendarRow.x < -60) {
-                        finishSwipeAnim.toX = -calendarContainer.width - 20
-                        finishSwipeAnim.direction = 1
-                        finishSwipeAnim.start()
-                    } else if (calendarRow.x > 60) {
-                        finishSwipeAnim.toX = calendarContainer.width + 20
-                        finishSwipeAnim.direction = -1
-                        finishSwipeAnim.start()
-                    } else {
-                        if (!isDragging) {
-                            var itemTotalWidth = ((calendarContainer.width - 48) / 7) + 8
-                            var index = Math.floor(mouse.x / itemTotalWidth)
-                            if (index >= 0 && index < 7) {
-                                selectedDate = getDateOfButton(index)
-                                refreshList()
-                            }
+            onPositionChanged: (mouse) => {
+                var diff = mouse.x - startX
+                calendarRow.x = diff
+                if (Math.abs(diff) > 10) isDragging = true
+            }
+            onReleased: (mouse) => {
+                if (calendarRow.x < -60) {
+                    finishSwipeAnim.toX = -calendarContainer.width - 20
+                    finishSwipeAnim.direction = 1
+                    finishSwipeAnim.start()
+                } else if (calendarRow.x > 60) {
+                    finishSwipeAnim.toX = calendarContainer.width + 20
+                    finishSwipeAnim.direction = -1
+                    finishSwipeAnim.start()
+                } else {
+                    if (!isDragging) {
+                        var itemTotalWidth = ((calendarContainer.width - 48) / 7) + 8
+                        var index = Math.floor(mouse.x / itemTotalWidth)
+                        if (index >= 0 && index < 7) {
+                            selectedDate = getDateOfButton(index)
+                            refreshList()
                         }
-                        bounceBackAnim.start()
                     }
+                    bounceBackAnim.start()
                 }
             }
         }
@@ -239,7 +280,13 @@ Page {
 
     ListView {
         id: listView
-        anchors.fill: parent; clip: true; spacing: 12; topMargin: 10; bottomMargin: 100
+        // Привязываем верх к календарю, чтобы не наезжало
+        anchors.top: calendarContainer.bottom
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+
+        clip: true; spacing: 12; topMargin: 10; bottomMargin: 100
         model: ListModel { id: habitModel }
 
         delegate: Rectangle {
