@@ -32,7 +32,6 @@ Page {
     function getDaysInMonth(d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); }
     function getFirstDayOffset(d) { var f = new Date(d.getFullYear(), d.getMonth(), 1).getDay(); return f === 0 ? 6 : f - 1; }
 
-    // Проверка на будущее (блокировка)
     function isFutureDate() {
         var now = new Date();
         var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -85,42 +84,61 @@ Page {
         width: parent.width
         spacing: 10
         topPadding: 40
-        // Убрали padding: 20 отсюда, будем задавать ширину контента явно
 
-        // ЗАГОЛОВОК
+        // ЗАГОЛОВОК (С ЛОГОТИПОМ-ЭМОДЗИ)
         RowLayout {
-            // Явно задаем ширину с отступами
             width: parent.width - 40
             anchors.horizontalCenter: parent.horizontalCenter
             spacing: 10
 
+            // --- ЛОГОТИП (ЭМОДЗИ) ---
+            Rectangle {
+                width: 50; height: 50
+                radius: 16
+                color: appWindow.surfaceColor // Фон под логотипом
+                border.color: appWindow.subTextColor
+                border.width: 1
+
+                Text {
+                    text: "✨" // Эмодзи-логотип (можно поменять на ✅, 🔥, 📅)
+                    font.pixelSize: 32
+                    anchors.centerIn: parent
+                }
+            }
+
+            // Текст
             Column {
+                Layout.alignment: Qt.AlignVCenter
                 Text {
                     text: toSqlDate(selectedDate) === toSqlDate(new Date()) ? "Сегодня" : Qt.formatDate(selectedDate, "d MMMM")
-                    font.pixelSize: 28; font.bold: true; color: "white"
+                    font.pixelSize: 24; font.bold: true; color: "white"
                 }
                 Text { text: "Ваши привычки"; font.pixelSize: 14; color: appWindow.subTextColor }
             }
+
+            Item { Layout.fillWidth: true }
+
+            // КНОПКА КАЛЕНДАРЯ
             Button {
                 Layout.alignment: Qt.AlignVCenter
-                background: Rectangle { color: appWindow.surfaceColor; radius: 12; border.color: appWindow.subTextColor; border.width: 1 }
-                contentItem: Row {
-                    spacing: 6; leftPadding: 10; rightPadding: 10
-                    Text { text: "📅"; font.pixelSize: 16; anchors.verticalCenter: parent.verticalCenter }
-                }
+                Layout.preferredWidth: 50
+                Layout.preferredHeight: 50
+                background: Rectangle { color: appWindow.surfaceColor; radius: 16; border.color: appWindow.subTextColor; border.width: 1 }
+                contentItem: Text { text: "📅"; font.pixelSize: 24; anchors.centerIn: parent }
                 onClicked: { pickerDate = new Date(selectedDate); datePickerDialog.open() }
             }
+
             Button {
                 visible: toSqlDate(selectedDate) !== toSqlDate(new Date())
                 Layout.alignment: Qt.AlignVCenter
-                background: Rectangle { color: appWindow.accentColor; radius: 12 }
+                Layout.preferredHeight: 50
+                background: Rectangle { color: appWindow.accentColor; radius: 16 }
                 contentItem: Text {
-                    text: "В сегодня"; color: "white"; font.bold: true; font.pixelSize: 12
-                    leftPadding: 10; rightPadding: 10; verticalAlignment: Text.AlignVCenter
+                    text: "В сегодня"; color: "white"; font.bold: true; font.pixelSize: 14
+                    leftPadding: 15; rightPadding: 15; verticalAlignment: Text.AlignVCenter; horizontalAlignment: Text.AlignHCenter
                 }
                 onClicked: { selectedDate = new Date(); refreshList() }
             }
-            Item { Layout.fillWidth: true }
         }
 
         Item { height: 10 }
@@ -128,7 +146,6 @@ Page {
         // --- ЛЕНТА ДНЕЙ ---
         Item {
             id: calendarContainer
-            // Ширина контейнера = ширина экрана минус отступы (20 слева + 20 справа)
             width: parent.width - 40
             height: 80
             anchors.horizontalCenter: parent.horizontalCenter
@@ -142,10 +159,8 @@ Page {
                 Repeater {
                     model: 7
                     delegate: Rectangle {
-                        // Точный расчет: (Ширина контейнера - (6 пробелов * 8px)) / 7
                         width: (calendarContainer.width - 48) / 7
                         height: 70
-
                         color: isSelected(index) ? appWindow.accentColor : appWindow.surfaceColor
                         radius: 14
                         Behavior on color { ColorAnimation { duration: 150 } }
@@ -185,7 +200,7 @@ Page {
                     if (Math.abs(diff) > 10) isDragging = true
                 }
                 onReleased: (mouse) => {
-                    if (calendarRow.x < -60) { // Чувствительность свайпа
+                    if (calendarRow.x < -60) {
                         finishSwipeAnim.toX = -calendarContainer.width - 20
                         finishSwipeAnim.direction = 1
                         finishSwipeAnim.start()
@@ -195,9 +210,7 @@ Page {
                         finishSwipeAnim.start()
                     } else {
                         if (!isDragging) {
-                            // Клик: пересчитываем координаты с учетом ширины элемента + отступа
                             var itemTotalWidth = ((calendarContainer.width - 48) / 7) + 8
-                            // Добавляем половину отступа для точности попадания
                             var index = Math.floor(mouse.x / itemTotalWidth)
                             if (index >= 0 && index < 7) {
                                 selectedDate = getDateOfButton(index)
@@ -235,22 +248,16 @@ Page {
             radius: 18
             color: appWindow.surfaceColor
 
-            // ИСПРАВЛЕНИЕ ОШИБКИ horizontalCenter of null
-            // Используем безопасный доступ или центрируем через ListView
             anchors.horizontalCenter: parent ? parent.horizontalCenter : undefined
-
-            // Бледность для будущих дат
             opacity: isFutureDate() ? 0.5 : 1.0
 
             MouseArea {
                 anchors.fill: parent; width: parent.width - 60
                 onClicked: {
-                    // ИСПРАВЛЕНИЕ connect of undefined: убрали connect()
                     stackView.push("AddHabitPage.qml", {
                         habitId: model.habitId, initialName: model.name,
                         initialDesc: model.description, initialFreq: model.frequency
                     })
-                    // AddHabitPage сам вызовет refreshList, connect здесь не нужен
                 }
             }
 
@@ -283,12 +290,9 @@ Page {
                     color: model.done ? appWindow.accentColor : "transparent"
                     border.color: model.done ? appWindow.accentColor : "#404050"
                     border.width: 2; Layout.alignment: Qt.AlignVCenter
-
                     Text { anchors.centerIn: parent; text: "✓"; color: "white"; font.bold: true; visible: model.done }
-
                     MouseArea {
                         anchors.fill: parent
-                        // БЛОКИРОВКА ГАЛОЧКИ В БУДУЩЕМ
                         enabled: !isFutureDate()
                         onClicked: {
                             var newState = !model.done
@@ -324,18 +328,25 @@ Page {
         width: 340; height: 420; modal: true
         closePolicy: Popup.CloseOnPressOutside
         background: Rectangle { color: appWindow.bgColor; radius: 20; border.color: appWindow.surfaceColor; border.width: 2 }
+
         ColumnLayout {
             anchors.fill: parent; anchors.margins: 20
+
+            // Шапка календаря
             RowLayout {
                 Layout.fillWidth: true
                 Button { text: "‹"; background: null; contentItem: Text { text: "‹"; color: appWindow.accentColor; font.pixelSize: 24; horizontalAlignment: Text.AlignHCenter } onClicked: pickerDate = new Date(pickerDate.getFullYear(), pickerDate.getMonth() - 1, 1) }
                 Text { text: Qt.formatDate(pickerDate, "MMMM yyyy"); color: "white"; font.bold: true; font.pixelSize: 18; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter }
                 Button { text: "›"; background: null; contentItem: Text { text: "›"; color: appWindow.accentColor; font.pixelSize: 24; horizontalAlignment: Text.AlignHCenter } onClicked: pickerDate = new Date(pickerDate.getFullYear(), pickerDate.getMonth() + 1, 1) }
             }
+
+            // Дни недели
             RowLayout {
                 Layout.fillWidth: true
                 Repeater { model: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]; Text { text: modelData; color: appWindow.subTextColor; font.pixelSize: 12; Layout.fillWidth: true; horizontalAlignment: Text.AlignHCenter } }
             }
+
+            // Сетка
             GridLayout {
                 columns: 7; Layout.fillWidth: true; Layout.fillHeight: true
                 Repeater { model: getFirstDayOffset(pickerDate); Item { Layout.fillWidth: true; Layout.fillHeight: true } }
@@ -353,7 +364,24 @@ Page {
                     }
                 }
             }
-            Button { text: "Закрыть"; Layout.alignment: Qt.AlignHCenter; background: Rectangle { color: appWindow.surfaceColor; radius: 10 } contentItem: Text { text: "Отмена"; color: "white"; anchors.centerIn: parent } onClicked: datePickerDialog.close() }
+
+            // КНОПКА ОТМЕНЫ
+            Item { Layout.fillHeight: true } // Spacer
+            Button {
+                Layout.alignment: Qt.AlignHCenter
+                Layout.preferredWidth: 200
+                Layout.preferredHeight: 50
+                background: Rectangle { color: appWindow.surfaceColor; radius: 16 }
+                contentItem: Text {
+                    text: "ОТМЕНА";
+                    color: "white";
+                    font.bold: true; font.pixelSize: 16;
+                    anchors.centerIn: parent
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+                onClicked: datePickerDialog.close()
+            }
         }
     }
 }
