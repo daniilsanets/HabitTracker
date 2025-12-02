@@ -12,7 +12,8 @@ DatabaseHandler::~DatabaseHandler() {
 void DatabaseHandler::connectToDatabase()
 {
     QString path = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
-    QString dbPath = path + "/habittracker_pro.sqlite"; // Новое имя базы для чистого старта
+    // ВАЖНО: Новое имя файла, чтобы создалась новая таблица с колонкой frequency
+    QString dbPath = path + "/habittracker_v2.sqlite";
 
     m_db = QSqlDatabase::addDatabase("QSQLITE");
     m_db.setDatabaseName(dbPath);
@@ -22,27 +23,52 @@ void DatabaseHandler::connectToDatabase()
     } else {
         qDebug() << "Database connected.";
         QSqlQuery query;
-        query.exec("CREATE TABLE IF NOT EXISTS habits (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, description TEXT)");
-        query.exec("CREATE TABLE IF NOT EXISTS history (id INTEGER PRIMARY KEY AUTOINCREMENT, habit_id INTEGER, date TEXT, status INTEGER)");
+        // Добавили поле frequency
+        query.exec("CREATE TABLE IF NOT EXISTS habits ("
+                   "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                   "name TEXT, "
+                   "description TEXT, "
+                   "frequency INTEGER DEFAULT 0)");
+
+        query.exec("CREATE TABLE IF NOT EXISTS history ("
+                   "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                   "habit_id INTEGER, "
+                   "date TEXT, "
+                   "status INTEGER)");
     }
 }
 
-bool DatabaseHandler::addHabit(const QString &name, const QString &description) {
+bool DatabaseHandler::addHabit(const QString &name, const QString &description, int frequency) {
     QSqlQuery query;
-    query.prepare("INSERT INTO habits (name, description) VALUES (:name, :description)");
+    query.prepare("INSERT INTO habits (name, description, frequency) VALUES (:name, :description, :freq)");
     query.bindValue(":name", name);
     query.bindValue(":description", description);
+    query.bindValue(":freq", frequency);
+    return query.exec();
+}
+
+// НОВОЕ: Логика редактирования
+bool DatabaseHandler::updateHabit(int id, const QString &name, const QString &description, int frequency) {
+    QSqlQuery query;
+    query.prepare("UPDATE habits SET name = :name, description = :description, frequency = :freq WHERE id = :id");
+    query.bindValue(":name", name);
+    query.bindValue(":description", description);
+    query.bindValue(":freq", frequency);
+    query.bindValue(":id", id);
     return query.exec();
 }
 
 QList<QString> DatabaseHandler::getHabits() {
     QList<QString> list;
-    QSqlQuery query("SELECT id, name, description FROM habits");
+    // Забираем еще и частоту (column 3)
+    QSqlQuery query("SELECT id, name, description, frequency FROM habits");
     while (query.next()) {
         QString id = query.value(0).toString();
         QString name = query.value(1).toString();
         QString desc = query.value(2).toString();
-        list.append(id + ":" + name + ":" + desc);
+        QString freq = query.value(3).toString();
+        // Формат: ID : Имя : Описание : Частота
+        list.append(id + ":" + name + ":" + desc + ":" + freq);
     }
     return list;
 }

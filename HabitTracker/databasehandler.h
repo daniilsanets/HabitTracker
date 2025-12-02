@@ -8,11 +8,6 @@
 #include <QDebug>
 #include <QDate>
 
-struct HabitStat {
-    QString name;
-    int completedCount;
-};
-
 class DatabaseHandler : public QObject
 {
     Q_OBJECT
@@ -21,12 +16,16 @@ public:
     ~DatabaseHandler();
 
     Q_INVOKABLE void connectToDatabase();
-    Q_INVOKABLE bool addHabit(const QString &name, const QString &description);
+
+    // Изменили: теперь принимаем frequency (0 - ежедневно, 1 - еженедельно)
+    Q_INVOKABLE bool addHabit(const QString &name, const QString &description, int frequency);
+
+    // НОВОЕ: Обновление существующей привычки
+    Q_INVOKABLE bool updateHabit(int id, const QString &name, const QString &description, int frequency);
+
     Q_INVOKABLE QList<QString> getHabits();
     Q_INVOKABLE void checkHabit(int id, bool checked);
     Q_INVOKABLE bool isHabitCompletedToday(int id);
-
-    // Новое: для удаления и статистики
     Q_INVOKABLE void removeHabit(int id);
     Q_INVOKABLE int getTotalCompletions(int id);
 
